@@ -140,7 +140,7 @@ public class MainActivity extends AppWidgetProvider {
 
 
                     StringBuilder AWSLogString1 = new StringBuilder();
-                    AWSLogString1.append("{");
+                    AWSLogString1.append("{EMU,");
                     AWSLogString1.append(intTemp);
                     AWSLogString1.append("C,");
                     AWSLogString1.append(intWind);
@@ -169,7 +169,13 @@ public class MainActivity extends AppWidgetProvider {
                     AWSLogString1.append(tsSunset);
                     AWSLogString1.append("}");
 
-                    new AsyncURLPost().execute(AWSURL, AWSLogString1.toString());
+
+                    AsyncURLPost task = new AsyncURLPost();
+
+                    if (task.getStatus() != AsyncTask.Status.RUNNING) {
+                        new AsyncURLPost().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,
+                                AWSURL, AWSLogString1.toString());
+                    }
                 }
                 LogCount++;
             }
@@ -284,13 +290,8 @@ public class MainActivity extends AppWidgetProvider {
                     if (minuteLastWeatherUpdate > minuteRefreshWeatherAtLock) {
                         updateWeather();
                     }
-                    final Handler handler = new Handler();
-                    handler.postDelayed(new Runnable() {
-                        @Override
-                        public void run() {
-                            updateView();
-                        }
-                    }, 1500);
+
+                    new Handler().postDelayed(() -> updateView(), 1500);
                 }
 
                 if (intent.getAction().equals("de.reikodd.meinwidget.TimeDiffAct")) {
@@ -299,17 +300,9 @@ public class MainActivity extends AppWidgetProvider {
 
                 if (intent.getAction().equals("de.reikodd.meinwidget.WeatherAct")) {
                     updateView();
-                    if (isOnline()==true)
-                    {
-                        updateWeather();
-                    }
-                    final Handler handler = new Handler();
-                    handler.postDelayed(new Runnable() {
-                        @Override
-                        public void run() {
-                            updateView();
-                        }
-                    }, 1500);
+                    updateWeather();
+
+                    new Handler().postDelayed(() -> updateView(), 1500);
                 }
 
                 if (intent.getAction().equals("de.reikodd.meinwidget.SyncBirthday"))
@@ -342,6 +335,8 @@ public class MainActivity extends AppWidgetProvider {
             views.setTextViewText(R.id.textdate, sdfdate.format(timeDiff).replace("Samstag", "Sonnabend"));
             views.setTextViewText(R.id.texttemp, textTempString);
 
+            //views.setFloat(R.id.textclock,"setTextSize",0);
+
             weatherIcon = DSKConditionToPNG.getPNGFileOfDate(ctx, DSKConditionToPNG.getPNGFileString
                     (strDSKIcon, intTemp, intWind, intCloudCover), c.getTimeInMillis());
 
@@ -364,10 +359,8 @@ public class MainActivity extends AppWidgetProvider {
             minuteLastWeatherUpdate = (int) (long) ((c.getTimeInMillis() - tsUpdateConditions) / 1000 / 60);
             if (minuteLastWeatherUpdate >= timeActAllMinute || minuteLastWeatherUpdate < 0) {
 
-                if(isOnline()==true)
-                {
-                    updateWeather();
-                }
+                updateWeather();
+
             }
 
             postSettings();
@@ -416,7 +409,7 @@ public class MainActivity extends AppWidgetProvider {
             AsyncURLGet task;
             task = new AsyncURLGet(new UpdateTimeService());
 
-            if (task.getStatus() != AsyncTask.Status.RUNNING)
+            if (task.getStatus() != AsyncTask.Status.RUNNING  && isOnline() == true)
 
             {
                 task.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,URLWeather);
@@ -441,7 +434,7 @@ public class MainActivity extends AppWidgetProvider {
                     if (LogState==true && LogCount>=LogCountValue) {
 
                         StringBuilder AWSLogString2 = new StringBuilder();
-                        AWSLogString2.append("{");
+                        AWSLogString2.append("EMU,");
                         AWSLogString2.append(settings.getString("WeatherPlace", "--"));
                         AWSLogString2.append(",");
                         AWSLogString2.append(Build.VERSION.SDK_INT);
@@ -450,7 +443,8 @@ public class MainActivity extends AppWidgetProvider {
                         AWSLogString2.append("-,");
                         AWSLogString2.append(settings.getString("patternEastern", "--"));
 
-                        new AsyncURLPost().execute(AWSURL,AWSLogString2.toString());
+                        new AsyncURLPost().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,
+                                AWSURL,AWSLogString2.toString());
                         LogCount=0;
                     }
                 }
